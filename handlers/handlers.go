@@ -84,7 +84,7 @@ func getSwiftCodes(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSwiftCodeByCode(w http.ResponseWriter, r *http.Request) {
-	swiftCodeName := chi.URLParam(r, "id")
+	swiftCodeName := chi.URLParam(r, "swift-code")
 	swiftCode, err := swiftCode.GetSwiftCodeBySwiftCodeName(swiftCodeName, collectionName)
 	if err != nil {
 		errorRes := Response{

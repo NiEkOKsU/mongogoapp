@@ -56,7 +56,7 @@ func CreateRouter() *chi.Mux {
 		router.Get("/healthcheck", healthCheck)
 		router.Post("/swift-codes", createSwiftCode)
 		router.Get("/swift-codes", getSwiftCodes)
-		router.Get("/swift-codes/{id}", getSwiftCodeByCode)
+		router.Get("/swift-codes/{swift-code}", getSwiftCodeByCode)
 		router.Get("/swift-codes/country/{countryISO2code}", getSwiftCodesByISO2Code)
 		router.Delete("/swift-codes/{swift-code}", deleteSwiftCode)
 	})
