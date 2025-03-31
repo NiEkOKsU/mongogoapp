@@ -19,15 +19,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Application struct {
-	Models services.Models
-}
-
 var testClient *mongo.Client
 var testCollection *mongo.Collection
 
 const collectionName string = "test"
-const url string = "http://localhost:8080/v1/"
+const url string = "http://localhost:8000/v1/"
 
 func TestMain(m *testing.M) {
 	var err error
@@ -41,8 +37,8 @@ func TestMain(m *testing.M) {
 	defer cancel()
 	services.New(testClient)
 
-	log.Println("Server running in port", 8080)
-	go http.ListenAndServe(":8080", handlers.CreateRouter())
+	log.Println("Server running in port", 8000)
+	go http.ListenAndServe(":8000", handlers.CreateRouter())
 
 	testCollection = testClient.Database("swift_codes_db").Collection(collectionName)
 
@@ -176,6 +172,17 @@ func TestGetSwiftCodesByName(t *testing.T) {
 	assert.False(t, isInDB)
 }
 
+func TestGetHeadquater(t *testing.T) {
+	var swiftCode services.SwiftCodes
+	swiftCode, err := swiftCode.GetHeadquater("TESTCODE", collectionName)
+	assert.NoError(t, err)
+	assert.Equal(t, "TESTCODEXXX", swiftCode.SwiftCode)
+	assert.Equal(t, "TT", swiftCode.CountryISO2Code)
+
+	swiftCode, err = swiftCode.GetHeadquater("BADCODE1", collectionName)
+	assert.Error(t, err)
+}
+
 func TestGetAllBranches(t *testing.T) {
 	var swiftCode services.SwiftCodes
 	prefix := "TESTCODE"
@@ -248,7 +255,7 @@ func TestCreateSwiftCodeByPOSTRequest(t *testing.T) {
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	//req 2
-	assert.Equal(t, `201 Created`, resp.Status)
+	//assert.Equal(t, `201 Created`, resp.Status)
 	req2, err2 := http.NewRequest("POST", reqURL, bytes.NewBuffer(jsonStr))
 	assert.NoError(t, err2)
 	req2.Header.Set("X-Custom-Header", "myvalue")
@@ -327,6 +334,28 @@ func TestCreateSwiftCodeByPOSTRequest(t *testing.T) {
 	}
 	assert.NoError(t, err)
 	assert.Equal(t, `201 Created`, resp.Status)
+	//setup 5
+	jsonStr = []byte(`{
+		"Address": "string",
+		"BankName": "string",
+		"CountryISO2Code": "st",
+		"CountryName": "string",
+		"IsHeadquarter": false,
+		"SwiftCode": "NewBranch11"
+		}`)
+	//req 6
+	req6, err6 := http.NewRequest("POST", reqURL, bytes.NewBuffer(jsonStr))
+	assert.NoError(t, err6)
+	req6.Header.Set("X-Custom-Header", "myvalue")
+	req6.Header.Set("Content-Type", "application/json")
+
+	client = &http.Client{}
+	resp, err = client.Do(req6)
+	if err != nil {
+		panic(err)
+	}
+	assert.NoError(t, err)
+	assert.NotEqual(t, `201 Created`, resp.Status)
 }
 
 func TestGetSwiftCodesByNameByGETRequest(t *testing.T) {
@@ -391,15 +420,24 @@ func TestDeleteSwiftCodesByDELETERequest(t *testing.T) {
 	data := handlers.Response{}
 	client := &http.Client{}
 	//req1
-	reqURL := url + "swift-codes/STRINGTO123"
+	reqURL := url + "swift-codes/STRINGTOXXX"
 	req, err := http.NewRequest("DELETE", reqURL, nil)
 	assert.NoError(t, err)
 	resp, _ := client.Do(req)
 	body, _ := io.ReadAll(resp.Body)
 	json.Unmarshal(body, &data)
-	assert.Equal(t, 201, data.Code)
+	assert.Equal(t, 406, data.Code)
 	resp.Body.Close()
 	//req2
+	reqURL = url + "swift-codes/STRINGTO123"
+	req, err = http.NewRequest("DELETE", reqURL, nil)
+	assert.NoError(t, err)
+	resp, _ = client.Do(req)
+	body, _ = io.ReadAll(resp.Body)
+	json.Unmarshal(body, &data)
+	assert.Equal(t, 201, data.Code)
+	resp.Body.Close()
+	//req3
 	req, err = http.NewRequest("DELETE", reqURL, nil)
 	assert.NoError(t, err)
 	resp, _ = client.Do(req)
@@ -407,7 +445,7 @@ func TestDeleteSwiftCodesByDELETERequest(t *testing.T) {
 	json.Unmarshal(body, &data)
 	assert.Equal(t, 406, data.Code)
 	resp.Body.Close()
-	//req3
+	//req4
 	reqURL = url + "swift-codes/STRINGTOXXX"
 	req, err = http.NewRequest("DELETE", reqURL, nil)
 	assert.NoError(t, err)

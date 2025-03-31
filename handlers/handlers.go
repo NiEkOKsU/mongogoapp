@@ -41,10 +41,29 @@ func createSwiftCode(w http.ResponseWriter, r *http.Request) {
 
 	swiftCode.CountryISO2Code = strings.ToUpper(swiftCode.CountryISO2Code)
 	swiftCode.CountryName = strings.ToUpper(swiftCode.CountryName)
+
+	if len(swiftCode.SwiftCode) != 11 {
+		errorRes := Response{
+			Message: "To short Swift code name",
+			Code:    308,
+		}
+		json.NewEncoder(w).Encode(errorRes)
+		return
+	}
+
 	if swiftCode.SwiftCode[len(swiftCode.SwiftCode)-3:] == "XXX" {
 		swiftCode.IsHeadQuater = true
 	} else {
 		swiftCode.IsHeadQuater = false
+		_, err = swiftCode.GetHeadquater(swiftCode.SwiftCode[:8], collectionName)
+		if err != nil {
+			errorRes := Response{
+				Message: "Can't add branch code without main code",
+				Code:    406,
+			}
+			json.NewEncoder(w).Encode(errorRes)
+			return
+		}
 	}
 	err = swiftCode.InsertSwiftCode(swiftCode, collectionName)
 	if err != nil {
@@ -74,7 +93,11 @@ func createSwiftCode(w http.ResponseWriter, r *http.Request) {
 func getSwiftCodes(w http.ResponseWriter, r *http.Request) {
 	swiftCodes, err := swiftCode.GetAllSwiftCodes(collectionName)
 	if err != nil {
-		log.Println(err)
+		errorRes := Response{
+			Message: "Error during database request",
+			Code:    500,
+		}
+		json.NewEncoder(w).Encode(errorRes)
 		return
 	}
 
@@ -84,7 +107,7 @@ func getSwiftCodes(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSwiftCodeByCode(w http.ResponseWriter, r *http.Request) {
-	swiftCodeName := chi.URLParam(r, "swift-code")
+	swiftCodeName := strings.ToUpper(chi.URLParam(r, "swift-code"))
 	swiftCode, err := swiftCode.GetSwiftCodeBySwiftCodeName(swiftCodeName, collectionName)
 	if err != nil {
 		errorRes := Response{
@@ -133,7 +156,7 @@ func getSwiftCodeByCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSwiftCodesByISO2Code(w http.ResponseWriter, r *http.Request) {
-	isoCode := chi.URLParam(r, "countryISO2code")
+	isoCode := strings.ToUpper(chi.URLParam(r, "countryISO2code"))
 	swiftCodes, err := swiftCode.GetAllSwiftCoidesByISOCode(isoCode, collectionName)
 	if err != nil {
 		errorRes := Response{
@@ -180,7 +203,29 @@ func getSwiftCodesByISO2Code(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteSwiftCode(w http.ResponseWriter, r *http.Request) {
-	swiftCodeName := chi.URLParam(r, "swift-code")
+	swiftCodeName := strings.ToUpper(chi.URLParam(r, "swift-code"))
+
+	if swiftCodeName[len(swiftCodeName)-3:] == "XXX" {
+		swiftCodes, err := swiftCode.GetAllBranchersWithPrefix(swiftCodeName[:8], collectionName)
+		log.Println(swiftCodes)
+		if err != nil {
+			errorRes := Response{
+				Message: "Error during database request",
+				Code:    500,
+			}
+			json.NewEncoder(w).Encode(errorRes)
+			return
+		}
+
+		if len(swiftCodes) != 0 {
+			errorRes := Response{
+				Message: "Couldn't delete main swift code with connected branches",
+				Code:    406,
+			}
+			json.NewEncoder(w).Encode(errorRes)
+			return
+		}
+	}
 
 	err := swiftCode.DeleteSwiftCode(swiftCodeName, collectionName)
 	if err != nil {

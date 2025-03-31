@@ -10,15 +10,15 @@ import (
 )
 
 type SwiftCodes struct {
-	SwiftCode       string `json:"swiftcode" bson:"_swiftcode"`
-	CountryISO2Code string `json:"countryiso2code" bson:"_countryiso2code"`
-	CodeType        string `json:"codetype,omitempty" bson:"_codetype,omitempty"`
-	BankName        string `json:"bankname" bson:"_bankname"`
-	Address         string `json:"address" bson:"_address"`
-	TownName        string `json:"townname,omitempty" bson:"_townname,omitempty"`
-	CountryName     string `json:"countryname" bson:"_countryname"`
-	TimeZone        string `json:"timezone,omitempty" bson:"_timezone,omitempty"`
-	IsHeadQuater    bool   `json:"isheadquater" bson:"_isheadquater"`
+	SwiftCode       string `json:"swiftcode" bson:"_swiftcode"  csv:"SWIFT CODE"`
+	CountryISO2Code string `json:"countryiso2code" bson:"_countryiso2code" csv:"COUNTRY ISO2 CODE"`
+	CodeType        string `json:"codetype,omitempty" bson:"_codetype,omitempty" csv:"CODE TYPE"`
+	BankName        string `json:"bankname" bson:"_bankname" csv:"NAME"`
+	Address         string `json:"address" bson:"_address" csv:"ADDRESS"`
+	TownName        string `json:"townname,omitempty" bson:"_townname,omitempty" csv:"TOWN NAME"`
+	CountryName     string `json:"countryname" bson:"_countryname" csv:"COUNTRY NAME"`
+	TimeZone        string `json:"timezone,omitempty" bson:"_timezone,omitempty" csv:"TIME ZONE"`
+	IsHeadQuater    bool   `json:"isheadquater" bson:"_isheadquater"  csv:"IS HEADQUATER"`
 }
 
 type SwiftCodeArrayElem struct {
@@ -99,6 +99,17 @@ func (s *SwiftCodes) IsSwiftCodeInDatabase(swiftCodeName string, collectionName 
 		return false
 	}
 	return true
+}
+
+func (s *SwiftCodes) GetHeadquater(swiftCodePrefix string, collectionName string) (SwiftCodes, error) {
+	collection := returnCollectionPointer(collectionName)
+	var swiftCode SwiftCodes
+	err := collection.FindOne(context.Background(), bson.M{"_swiftcode": swiftCodePrefix + "XXX"}).Decode(&swiftCode)
+	if err != nil {
+		log.Println(err)
+		return SwiftCodes{}, err
+	}
+	return swiftCode, nil
 }
 
 func (t *SwiftCodes) GetAllSwiftCodes(collectionName string) ([]SwiftCodes, error) {
